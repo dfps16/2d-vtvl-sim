@@ -23,9 +23,10 @@ I θ̈  =  -T sin(δ) · L
 ## Repository layout
 
 ```
-vtvl-descent-control/
+2d-vtvl-sim/
 ├── src/
 │   ├── params.py         — single source of truth: physical params, gains, design targets
+│   ├── paths.py          — centralised results-directory paths (no hardcoded absolute paths)
 │   ├── dynamics.py       — 3-DOF EOM
 │   ├── sim.py            — solve_ivp wrapper, touchdown event
 │   ├── controllers.py    — altitude PID (baseline); attitude PD + cascaded PD (complete); LQR not yet added
@@ -33,10 +34,11 @@ vtvl-descent-control/
 │   ├── run_scenarios.py  — divert-and-land, dispersion sweep (empty stub)
 │   └── plotting.py       — trajectories, fuel, animation (empty stub)
 ├── notebooks/
-│   ├── check_sim.py       — baseline altitude-PID diagnostics
-│   ├── attitude_loop.py   — inner attitude-loop response + robustness
-│   ├── check_attitude.py  — inner-loop verification against design targets
-│   └── check_cascade.py   — full cascade divert-and-land scenario
+│   ├── check_sim.py         — baseline altitude-PID diagnostics
+│   ├── attitude_loop.py     — inner attitude-loop response + robustness
+│   ├── check_attitude.py    — inner-loop verification against design targets
+│   ├── check_cascade.py     — full cascade divert-and-land scenario
+│   └── animate_descent.py   — schematic side-view descent animation (MP4/GIF)
 ├── results/              — saved diagnostic plots
 ├── tests/
 │   ├── dynamics_test.py       — free-fall and hover equilibrium
@@ -101,7 +103,7 @@ Defined in `src/params.py`, the single source of truth imported by the simulator
 | `I` | 200 kg·m² | Pitch moment of inertia |
 | `L` | 0.5 m | CoM-to-gimbal moment arm |
 | `g` | 9.81 m/s² | Gravitational acceleration |
-| `T_min` | 1000 N | Minimum throttle (0.4·T_max, non-zero — the non-convex constraint) |
+| `T_min` | 1000 N | Minimum throttle (0.4·T_max, non-zero) |
 | `T_max` | 2500 N | Maximum thrust (≈2.1× hover weight) |
 | `δ_max` | 12° | Gimbal deflection limit |
 | `tilt_limit` | 10° | Pitch reference clamp (outer-loop θ_cmd limit) |
@@ -115,11 +117,11 @@ Mass depletion is deferred to Week 3 (known technical debt); LQR gains computed 
 ```bash
 python -m venv venv
 source venv/bin/activate
-pip install -r vtvl-descent-control/requirements.txt
+pip install -r requirements.txt
 ```
 
 Run tests from the repo root:
 
 ```bash
-python -m pytest vtvl-descent-control/tests/ -v
+python -m pytest tests/ -v
 ```
