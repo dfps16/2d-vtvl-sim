@@ -1,14 +1,7 @@
 import numpy as np
 from scipy.integrate import solve_ivp
 from src.dynamics import lander_eom
-
-# Shared physical parameters
-PARAMS = {
-    'm': 1500.0,
-    'I': 2000.0,
-    'L': 1.5,
-    'g': 9.81,
-}
+from src.params import PARAMS
 
 
 def test_free_fall():

@@ -4,17 +4,17 @@ from scipy.integrate import solve_ivp
 from src.dynamics import lander_eom
 
 
-def closed_loop_rhs(t, state, params):
+def closed_loop_rhs(t, state, params, controller):
     """RHS passed to solve_ivp: query controller, saturate actuators, return state derivatives."""
-    T, delta = params['controller'](t, state, params)
+    T, delta = controller(t, state, params)
 
-    # Clamp magnitude while preserving sign, then clamp gimbal angle
-    T = np.sign(T) * np.clip(np.abs(T), params['T_min'], params['T_max'])
+    # Clamp magnitude, then clamp gimbal angle
+    T = np.clip(T, params['T_min'], params['T_max'])
     delta = np.clip(delta, -params['delta_max'], params['delta_max'])
-    state = lander_eom(t, state, T, delta, params)
-    return state
+    state_dot = lander_eom(t, state, T, delta, params)
+    return state_dot
 
-def touchdown_event(t, state, params):
+def touchdown_event(t, state, params, controller):
     # z = state[1]; integration stops when z crosses zero from above
     return state[1]
 

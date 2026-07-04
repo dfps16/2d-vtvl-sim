@@ -25,15 +25,22 @@ I θ̈  =  -T sin(δ) · L
 ```
 vtvl-descent-control/
 ├── src/
+│   ├── params.py         — single source of truth: physical params, gains, design targets
 │   ├── dynamics.py       — 3-DOF EOM
 │   ├── sim.py            — solve_ivp wrapper, touchdown event
-│   ├── controllers.py    — altitude PID (baseline), cascaded PD, LQR (in progress)
-│   ├── guidance.py       — convex G-FOLD reference (stretch, not started)
-│   ├── run_scenarios.py  — divert-and-land, dispersion sweep (not started)
-│   └── plotting.py       — trajectories, fuel, animation (not started)
-├── results/
+│   ├── controllers.py    — altitude PID (baseline); attitude PD + cascaded PD (complete); LQR not yet added
+│   ├── guidance.py       — convex G-FOLD reference (stretch, empty stub)
+│   ├── run_scenarios.py  — divert-and-land, dispersion sweep (empty stub)
+│   └── plotting.py       — trajectories, fuel, animation (empty stub)
+├── notebooks/
+│   ├── check_sim.py       — baseline altitude-PID diagnostics
+│   ├── attitude_loop.py   — inner attitude-loop response + robustness
+│   ├── check_attitude.py  — inner-loop verification against design targets
+│   └── check_cascade.py   — full cascade divert-and-land scenario
+├── results/              — saved diagnostic plots
 ├── tests/
-│   └── dynamics_test.py  — free-fall and hover equilibrium
+│   ├── dynamics_test.py       — free-fall and hover equilibrium
+│   └── attitude_test_plan.md  — inner-loop regression spec (planned)
 └── requirements.txt
 ```
 
@@ -49,16 +56,30 @@ vtvl-descent-control/
 
 **`controllers.py`** — `AltitudePIDController` (Baseline 0): 1-DOF hover/descent with `mg` feedforward. Gimbal fixed at zero; no lateral or attitude control. Sanity-checks the hover equilibrium and integrator.
 
-**Tests** (both passing):
+**Tests** (both passing, logic re-verified via independent RK4 integration):
 - `test_free_fall` — zero thrust reduces to analytic projectile motion, error < 1e-6 m
 - `test_hover_equilibrium` — `T = mg, θ = δ = 0` holds state constant over 10 s, drift < 1e-4
 
-### Week 2 — cascaded PD (next)
+**Closed-loop baseline result.** PID tuned to `kp=3.0, ki=0.0, kd=30.0` with conditional integration (integral active only when `|e| < 5`). From a 100 m drop at rest, the lander reaches a soft vertical touchdown at **ż ≈ -0.66 m/s** in ≈26 s — vertical channel confirmed working before adding lateral/attitude control.
 
-- Inner loop: gimbal `δ` controls pitch `θ`
-- Outer loop: commanded tilt `θ_cmd` controls horizontal position; throttle controls altitude
-- Divert-and-land scenario: offset start → vertical soft landing
-- Plot initial-undershoot to confirm understanding of the underactuation coupling
+> **Resolved in Week 2:** the earlier split between `tests/dynamics_test.py` (`m=1500, I=2000, L=1.5`) and the closed-loop sim (`m=120, I=200, L=0.5`) is gone — both now import a single `src/params.py` source of truth.
+
+### Week 2 — cascaded PD (substantially complete)
+
+Parameters centralised into `src/params.py` (physical constants, gains, and design targets), so the simulator, notebooks, and tests can no longer drift apart. `sim.py` now takes the controller as an explicit argument rather than through the params dict.
+
+**`AttitudePDController`** (inner loop) — PD in angular-acceleration space with dynamic inversion. From the rotational EOM `I·θ̈ = -T·L·sin(δ)`, a PD law sets `θ̈_des`, inverted exactly to `δ = arcsin(-θ̈_des / b)` with `b = T·L/I`. Stateless (rate measured), with arcsin-domain clipping and hard δ saturation.
+
+**`CascadedController`** — three nested loops, each generating the next loop's reference:
+- *Outer (position → tilt):* horizontal PD → pitch reference `θ_ref = -ẍ_des / g` (small-angle inversion), clipped to `tilt_limit`.
+- *Middle (altitude → thrust):* PD with exact hover feedforward `mg/cos(θ)`, saturated to `[T_min, T_max]`.
+- *Inner (attitude → gimbal):* EOM inversion as above, using post-saturation thrust for `b`.
+
+Gains are derived from design targets `(ζ, ωₙ)` assuming an ideal 2nd-order plant (`kp = ωₙ²`, `kd = 2ζωₙ`), so retuning happens at the physics level. Bandwidth separation ω_x ≪ ω_θ (0.4 vs 4 rad/s) keeps the inner loop quasi-static from the outer loop's perspective.
+
+**Divert-and-land scenario running** (`notebooks/check_cascade.py`): from 100 m altitude with a 20 m lateral offset target, the cascade drives a soft vertical touchdown, producing position/attitude tracking, trajectory (z-vs-x), rate, and control-input plots plus CSV export.
+
+**Remaining:** write the inner-loop regression suite (`tests/attitude_test_plan.md` specs it — steady-state error, overshoot vs linear prediction, sign convention, saturation) and extend regression coverage to the closed-loop lateral channel.
 
 ### Week 3 — LQR (planned)
 
@@ -72,15 +93,20 @@ Convex G-FOLD reference tracked by LQR, or Monte Carlo dispersion analysis if sk
 
 ## Parameters (nominal)
 
+Defined in `src/params.py`, the single source of truth imported by the simulator, notebooks, and tests:
+
 | Symbol | Value | Description |
 |--------|-------|-------------|
-| `m` | 1500 kg | Dry mass |
-| `I` | 2000 kg·m² | Pitch moment of inertia |
-| `L` | 1.5 m | CoM-to-gimbal moment arm |
+| `m` | 120 kg | Dry mass |
+| `I` | 200 kg·m² | Pitch moment of inertia |
+| `L` | 0.5 m | CoM-to-gimbal moment arm |
 | `g` | 9.81 m/s² | Gravitational acceleration |
-| `T_min` | TBD | Minimum throttle (non-zero — the non-convex constraint) |
-| `T_max` | TBD | Maximum thrust |
-| `δ_max` | TBD | Gimbal deflection limit |
+| `T_min` | 1000 N | Minimum throttle (0.4·T_max, non-zero — the non-convex constraint) |
+| `T_max` | 2500 N | Maximum thrust (≈2.1× hover weight) |
+| `δ_max` | 12° | Gimbal deflection limit |
+| `tilt_limit` | 10° | Pitch reference clamp (outer-loop θ_cmd limit) |
+
+Mass depletion is deferred to Week 3 (known technical debt); LQR gains computed at fixed mass will need revisiting before the controller comparison is final.
 
 ---
 
