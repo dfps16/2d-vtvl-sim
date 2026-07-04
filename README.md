@@ -1,6 +1,6 @@
 # 2D VTVL Descent Simulation
 
-Planar (3-DOF) thrust-vectoring lander simulation with cascaded PD, LQR, and (stretch) convex G-FOLD guidance. Built as a GNC portfolio piece with direct VTVL relevance.
+Planar (3-DOF) thrust-vectoring lander simulation with cascaded PD, LQR, and (stretch) convex G-FOLD guidance.
 
 ---
 
