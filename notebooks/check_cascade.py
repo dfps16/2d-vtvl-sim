@@ -1,7 +1,9 @@
 import numpy as np
+
 from src.controllers import CascadedController
 from src.params import PARAMS, SYS_PROP_CASC
 from src.paths import result_path
+from src.plotting import plot_state
 from src.sim import run_sim
 
 # Store design targets from params.py
@@ -201,8 +203,11 @@ if __name__ == '__main__':
     diversion_target = 20.0
     altitude_target = 100.0
     t, state, u, accels = cascade_run(state_0, x_target=diversion_target, altitude_target=altitude_target, t_end=30)
-    plot_cascade(t, state, u, x_target=diversion_target, z_target=altitude_target)
+    
+    # plot_cascade(t, state, u, x_target=diversion_target, z_target=altitude_target)
+    # plot_rates(t, state)
+    plot_state(t, state, x_target=diversion_target, z_target=altitude_target)
     plot_trajectory(state, x_target=diversion_target, z_target=altitude_target)
-    plot_rates(t, state)
+    
     plot_control_inputs(t, u)
     save_csv(t, state)
