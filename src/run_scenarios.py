@@ -1,0 +1,43 @@
+import os
+import sys
+
+import matplotlib.pyplot as plt
+
+# Make ``src`` importable when run as a script from any cwd.
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
+
+from src.paths import result_path
+from src.plotting import animate_descent, plot_state, plot_trajectory
+from src.post_processing import save_csv, write_sim_report
+from src.scenario_io import load_scenario
+from src.sim import sim_run
+
+if __name__ == '__main__':
+    scenario_path = sys.argv[1] if len(sys.argv) > 1 else 'test_scenarios/scenario1.json'
+
+    sim_setup, solver_setup, outputs = load_scenario(scenario_path)
+    sim_results = sim_run(sim_setup, solver_setup)
+
+    if outputs['trajectory'] == 1:
+        traj_plot = plot_trajectory(sim_results)
+        traj_plot.show()
+
+    if outputs['state'] == 1:
+        state_plot = plot_state(sim_results, sim_setup)
+        state_plot.show()
+        
+    if outputs['animation'] == 1:
+        fig, anim = animate_descent(
+            sim_results, sim_setup,
+            save_path=result_path('last_sim_animation.mp4'),
+        )
+    if outputs['report'] == 1:
+        report = write_sim_report(sim_setup, sim_results)
+
+    if outputs['csv'] == 1:
+        csv = save_csv(sim_results)
+    
+    plt.show()

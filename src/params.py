@@ -10,12 +10,13 @@ import numpy as np
 T_MAX = 2500.0  # N, ~2.1x hover weight (m*g = 1177 N)
 
 PARAMS = {
-    'm': 120.0,                   # kg   dry mass
+    'm': 200.0,                   # kg   dry mass
     'I': 200.0,                   # kg.m^2  pitch moment of inertia
     'L': 0.5,                     # m    CoM-to-gimbal moment arm
     'g': 9.81,                    # m/s^2
     'T_min': 0.4 * T_MAX,         # N    min throttle
     'T_max': T_MAX,               # N    max thrust
+    'isp': 200,
     'delta_max': np.radians(12),
     'tilt_limit': np.radians(10),  # rad  gimbal deflection limit
 }

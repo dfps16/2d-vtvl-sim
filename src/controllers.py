@@ -186,5 +186,11 @@ class CascadedController:
 
         return (u_T, u_delta)
 
+CONTROLLER_REGISTRY = {
+    "Cascaded PD": {
+        "gain_fields": ["kp_x", "kd_x", "kp_z", "kd_z", "kp_theta", "kd_theta"],
+        "build": lambda gains, x_target, z_target: CascadedController(gains, x_target, z_target),
+    },
 
-
+    
+}
