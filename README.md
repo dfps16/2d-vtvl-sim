@@ -24,26 +24,33 @@ I θ̈  =  -T sin(δ) · L
 
 ```
 2d-vtvl-sim/
+├── pyproject.toml        — project metadata + pinned dependencies (uv-managed)
+├── uv.lock               — resolved dependency lockfile for reproducible installs
+├── test_scenarios/
+│   └── scenario1.json    — example scenario: physical params, controller/gains, phases, outputs
 ├── src/
-│   ├── params.py         — single source of truth: physical params, gains, design targets
-│   ├── paths.py          — centralised results-directory paths (no hardcoded absolute paths)
-│   ├── dynamics.py       — 3-DOF EOM
-│   ├── sim.py            — solve_ivp wrapper, touchdown event
-│   ├── controllers.py    — altitude PID (baseline); attitude PD + cascaded PD (complete); LQR not yet added
-│   ├── guidance.py       — convex G-FOLD reference (stretch, empty stub)
-│   ├── run_scenarios.py  — divert-and-land, dispersion sweep (empty stub)
-│   └── plotting.py       — trajectories, fuel, animation (empty stub)
+│   └── vtvl_sim/
+│       ├── params.py          — single source of truth: physical params, gains, design targets
+│       ├── paths.py           — centralised results-directory paths (no hardcoded absolute paths)
+│       ├── dynamics.py        — 3-DOF EOM
+│       ├── sim.py             — vtvl_solver/sim_run: solve_ivp wrapper, phase chaining, touchdown event
+│       ├── controllers.py     — altitude PID, attitude PD, cascaded PD + CONTROLLER_REGISTRY; LQR not yet added
+│       ├── schemas.py         — Pydantic models validating scenario JSON files
+│       ├── scenario_io.py     — load_scenario: JSON -> validated sim/solver/output setup
+│       ├── post_processing.py — CSV export, touchdown report
+│       ├── guidance.py        — convex G-FOLD reference (stretch, empty stub)
+│       ├── run_scenarios.py   — CLI entrypoint: run a scenario JSON end to end
+│       └── plotting.py        — state/trajectory plots, descent animation
 ├── notebooks/
 │   ├── check_sim.py         — baseline altitude-PID diagnostics
 │   ├── attitude_loop.py     — inner attitude-loop response + robustness
 │   ├── check_attitude.py    — inner-loop verification against design targets
 │   ├── check_cascade.py     — full cascade divert-and-land scenario
 │   └── animate_descent.py   — schematic side-view descent animation (MP4/GIF)
-├── results/              — saved diagnostic plots
-├── tests/
-│   ├── dynamics_test.py       — free-fall and hover equilibrium
-│   └── attitude_test_plan.md  — inner-loop regression spec (planned)
-└── requirements.txt
+├── results/              — saved diagnostic plots (generated, gitignored)
+└── tests/
+    ├── dynamics_test.py       — free-fall and hover equilibrium
+    └── attitude_test_plan.md  — inner-loop regression spec (planned)
 ```
 
 ---
@@ -114,14 +121,20 @@ Mass depletion is deferred to Week 3 (known technical debt); LQR gains computed 
 
 ## Setup
 
+Requires [uv](https://docs.astral.sh/uv/):
+
 ```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+uv sync
 ```
 
 Run tests from the repo root:
 
 ```bash
-python -m pytest tests/ -v
+uv run pytest tests/ -v
+```
+
+Run a scenario:
+
+```bash
+uv run python -m vtvl_sim.run_scenarios test_scenarios/scenario1.json
 ```

@@ -14,11 +14,20 @@ Plots are built around the four acceptance criteria for the inner loop:
 Two scenarios are run: a 2 deg step (stays linear) and an 8 deg step (saturates).
 """
 
+import os
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
-from src.controllers import AttitudePDController
-from src.params import PARAMS, PD_GAINS
-from src.sim import run_sim
+
+# Make ``vtvl_sim`` (under src/) importable when run as a script from any cwd.
+_SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
+
+from vtvl_sim.controllers import AttitudePDController
+from vtvl_sim.params import PARAMS, PD_GAINS
+from vtvl_sim.sim import run_sim
 
 # Recover the design targets from the gains (single source of truth in params):
 #   omega_n = sqrt(kp),  zeta = kd / (2*sqrt(kp))

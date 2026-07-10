@@ -1,10 +1,18 @@
+import os
+import sys
+
 import numpy as np
 
-from src.controllers import CascadedController
-from src.params import PARAMS, SYS_PROP_CASC
-from src.paths import result_path
-from src.plotting import plot_state
-from src.sim import run_sim
+# Make ``vtvl_sim`` (under src/) importable when run as a script from any cwd.
+_SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
+
+from vtvl_sim.controllers import CascadedController
+from vtvl_sim.params import PARAMS, SYS_PROP_CASC
+from vtvl_sim.paths import result_path
+from vtvl_sim.plotting import plot_state
+from vtvl_sim.sim import run_sim
 
 # Store design targets from params.py
 ZETA_X = SYS_PROP_CASC['zeta_x']

@@ -4,7 +4,7 @@ import sys
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from src.dynamics import lander_eom
+from vtvl_sim.dynamics import lander_eom
 
 # Make ``src`` importable when run as a script from any cwd.
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

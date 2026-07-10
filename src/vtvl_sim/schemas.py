@@ -16,7 +16,7 @@ from pydantic import (
     model_validator,
 )
 
-from src.controllers import CONTROLLER_REGISTRY
+from vtvl_sim.controllers import CONTROLLER_REGISTRY
 
 
 class LanderState(BaseModel):

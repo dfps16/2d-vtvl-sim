@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.integrate import solve_ivp
-from src.dynamics import lander_eom
-from src.params import PARAMS
+from vtvl_sim.dynamics import lander_eom
+from vtvl_sim.params import PARAMS
 
 
 def test_free_fall():

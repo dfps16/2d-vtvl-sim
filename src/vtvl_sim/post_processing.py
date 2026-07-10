@@ -1,7 +1,7 @@
 
 import numpy as np
 
-from src.paths import result_path
+from vtvl_sim.paths import result_path
 
 
 def save_csv(sim_results, save_path=result_path('last_sim_data.csv')):

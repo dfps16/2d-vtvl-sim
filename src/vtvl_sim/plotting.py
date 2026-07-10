@@ -1,9 +1,9 @@
 import os
 import shutil
 
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import animation
+from matplotlib.figure import Figure
 from matplotlib.patches import Polygon
 
 
@@ -17,9 +17,8 @@ def plot_state(sim_results, sim_setup):
     theta = sim_results['theta']
     thetadot = sim_results['thetadot']
 
-    fig, axes = plt.subplots(3, 2, figsize=(10, 9), sharex=True)
-    
-    axes = axes.flatten()
+    fig = Figure(figsize=(10, 9)) 
+    axes = fig.subplots(3, 2, sharex=True).flatten()
     
     axes[0].plot(t, x, label='x')
     # axes[0].axhline(x_target, color='r', linestyle='--', linewidth=0.8, label='x_target')
@@ -73,7 +72,9 @@ def plot_trajectory(sim_results):
     # vel_abs = np.sqrt(xdot_f ** 2 + zdot_f ** 2)
     # theta_f = np.degrees(theta[-1])
 
-    fig, ax = plt.subplots(figsize=(4, 12))
+    fig = Figure(figsize=(4, 12))
+    ax = fig.subplots()
+    
     ax.plot(x, z)
     ax.plot(x[0], z[0], 'go', label='start')
     ax.plot(x[-1], z[-1], 'rs', label='end')
@@ -192,7 +193,8 @@ def animate_descent(sim_results, sim_setup,
     z_hi = max(z.max(), *tz) + pad
     z_lo = -pad
 
-    fig, ax = plt.subplots(figsize=(6, 11))
+    fig = Figure(figsize=(4, 12))
+    ax = fig.subplots()
     ax.set_aspect('equal')
     ax.set_xlim(x_lo, x_hi)
     ax.set_ylim(z_lo, z_hi)

@@ -1,8 +1,17 @@
+import os
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
-from src.controllers import AltitudePIDController
-from src.params import PARAMS, PID_GAINS
-from src.sim import run_sim
+
+# Make ``vtvl_sim`` (under src/) importable when run as a script from any cwd.
+_SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
+
+from vtvl_sim.controllers import AltitudePIDController
+from vtvl_sim.params import PARAMS, PID_GAINS
+from vtvl_sim.sim import run_sim
 
 z_target = 0  # m
 controller = AltitudePIDController(PID_GAINS, z_target)

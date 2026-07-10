@@ -22,13 +22,15 @@ import numpy as np
 from matplotlib import animation
 from matplotlib.patches import Polygon
 
-# Make ``src`` and ``notebooks`` importable when run as a script from any cwd.
+# Make ``vtvl_sim`` (under src/) and ``notebooks`` importable when run as a script from any cwd.
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if _ROOT not in sys.path:
-    sys.path.insert(0, _ROOT)
+_SRC = os.path.join(_ROOT, 'src')
+for _path in (_ROOT, _SRC):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
 
-from src.params import PARAMS
-from src.paths import result_path
+from vtvl_sim.params import PARAMS
+from vtvl_sim.paths import result_path
 
 from notebooks.check_cascade import cascade_run
 

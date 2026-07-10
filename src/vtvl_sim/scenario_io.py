@@ -6,8 +6,8 @@ import json
 
 import numpy as np
 
-from src.controllers import CONTROLLER_REGISTRY
-from src.schemas import Outputs, ScenarioSetup, SolverSetup
+from vtvl_sim.controllers import CONTROLLER_REGISTRY
+from vtvl_sim.schemas import Outputs, ScenarioSetup, SolverSetup
 
 
 def load_scenario(path):
