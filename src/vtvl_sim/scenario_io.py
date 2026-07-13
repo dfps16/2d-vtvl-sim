@@ -10,18 +10,15 @@ from vtvl_sim.controllers import CONTROLLER_REGISTRY
 from vtvl_sim.schemas import Outputs, ScenarioSetup, SolverSetup
 
 
-def load_scenario(path):
-    with open(path) as f:
-        raw = json.load(f)
-
-    scenario = ScenarioSetup.model_validate(raw['sim_setup'])
-    solver = SolverSetup.model_validate(raw['solver_setup'])
-    outputs = Outputs.model_validate(raw['outputs'])
+def build_setup(raw_sim_setup, raw_solver_setup):
+    """Validate raw dicts (from JSON or a GUI) into the sim_setup/solver_setup
+    shape that sim_run expects. No file I/O — usable from anywhere."""
+    scenario = ScenarioSetup.model_validate(raw_sim_setup)
+    solver = SolverSetup.model_validate(raw_solver_setup)
 
     params = scenario.params.model_dump(exclude={'delta_max_deg', 'tilt_limit_deg'})
     params['delta_max'] = np.radians(scenario.params.delta_max_deg)
     params['tilt_limit'] = np.radians(scenario.params.tilt_limit_deg)
-    
 
     sim_setup = {
         'params': params,
@@ -31,14 +28,13 @@ def load_scenario(path):
         'initial_state': scenario.initial_state.to_list(),
         'landing_tolerance': scenario.landing_tolerance,
     }
-    solver_setup = solver.model_dump()
+    return sim_setup, solver.model_dump()
 
-    outputs_setup = {
-        'trajectory': outputs.trajectory,
-        'state': outputs.state,
-        'animation': outputs.animation,
-        'report': outputs.report,
-        'csv': outputs.csv,
-    }
 
+def load_scenario(path):
+    with open(path) as f:
+        raw = json.load(f)
+
+    sim_setup, solver_setup = build_setup(raw['sim_setup'], raw['solver_setup'])
+    outputs_setup = Outputs.model_validate(raw['outputs']).model_dump()
     return sim_setup, solver_setup, outputs_setup

@@ -72,7 +72,7 @@ def plot_trajectory(sim_results):
     # vel_abs = np.sqrt(xdot_f ** 2 + zdot_f ** 2)
     # theta_f = np.degrees(theta[-1])
 
-    fig = Figure(figsize=(4, 12))
+    fig = Figure(figsize=(4, 8))
     ax = fig.subplots()
     
     ax.plot(x, z)
@@ -83,7 +83,7 @@ def plot_trajectory(sim_results):
     ax.set_title('Trajectory (z vs x)')
     ax.legend(loc='upper right')
     ax.grid(True)
-    ax.set_aspect('equal')
+    # ax.set_aspect('equal')
 
     fig.tight_layout()
     return fig
@@ -154,7 +154,7 @@ def _glyph(cx, cz, theta, delta, throttle_frac, glyph_len):
 
 
 def animate_descent(sim_results, sim_setup,
-                    fps=30, playback_speed=1.0, glyph_len=8.0,
+                    fps=20, playback_speed=1.0, glyph_len=8.0,
                     save_path=None):
     """Render the trajectory to a video file. Returns the FuncAnimation object.
 
@@ -193,15 +193,32 @@ def animate_descent(sim_results, sim_setup,
     z_hi = max(z.max(), *tz) + pad
     z_lo = -pad
 
-    fig = Figure(figsize=(4, 12))
+    # Figure aspect ratio derived from the actual data extents, so it always
+    # matches what set_aspect('equal') below enforces — no per-scenario
+    # mismatch between the declared figsize and the real x/z proportions.
+    # An extra fixed-width sidebar is reserved on the right for the HUD
+    # panel, so it never overlaps the trajectory (see fig.text() below).
+    z_range = z_hi - z_lo
+    x_range = x_hi - x_lo
+    fig_height = 9.0
+    plot_width = max(3.0, min(12.0, fig_height * (x_range / z_range)))
+    hud_width = 3.4
+    fig_width = plot_width + hud_width
+
+    fig = Figure(figsize=(fig_width, fig_height), dpi=150)
     ax = fig.subplots()
     ax.set_aspect('equal')
     ax.set_xlim(x_lo, x_hi)
     ax.set_ylim(z_lo, z_hi)
     ax.set_xlabel('x [m]')
     ax.set_ylabel('z [m]')
-    ax.set_title('VTVL trajectory (lander glyph not to scale)')
+    ax.set_title('VTVL trajectory', fontsize=9)
     ax.grid(True, alpha=0.3)
+
+    # Shrink the axes to the left portion of the figure, freeing up the
+    # right-hand hud_width strip for the HUD panel.
+    axes_right = (plot_width / fig_width) * 0.95
+    fig.subplots_adjust(left=0.16, right=axes_right, top=0.88, bottom=0.10)
 
     # Static scene
     ax.axhline(0.0, color='saddlebrown', linewidth=2, zorder=0)          # ground
@@ -217,10 +234,18 @@ def animate_descent(sim_results, sim_setup,
     body = Polygon(np.zeros((4, 2)), closed=True, facecolor='lightsteelblue',
                    edgecolor='black', linewidth=1.2, zorder=4)
     ax.add_patch(body)
-    hud = ax.text(0.03, 0.97, '', transform=ax.transAxes, va='top', ha='left',
-                  family='monospace', fontsize=9,
-                  bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-    ax.legend(loc='upper right')
+    # Figure-level (not axes-level) text, placed in the reserved right-hand
+    # strip — this is what keeps it fully outside the trajectory plot itself,
+    # rather than just repositioned within the same axes.
+    hud_x = axes_right + 0.03
+    hud = fig.text(hud_x, 0.5, '', transform=fig.transFigure, va='center', ha='left',
+                   family='monospace', fontsize=8,
+                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.9, edgecolor='gray'))
+    # Legend placed above and to the right of the axes (outside the plot
+    # area) so it never overlaps the trajectory/lander content, including
+    # near apogee which sits roughly centered in x.
+    ax.legend(loc='lower right', bbox_to_anchor=(1.0, 1.02), ncol=3,
+              fontsize=8, frameon=False)
 
     def update(i):
         # Plume length tracks the actual (applied) throttle — the physical thrust.
@@ -247,7 +272,7 @@ def animate_descent(sim_results, sim_setup,
     if save_path is not None:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         if shutil.which('ffmpeg'):
-            writer = animation.FFMpegWriter(fps=fps, bitrate=2400)
+            writer = animation.FFMpegWriter(fps=fps, bitrate=4000)
             out = save_path
         else:
             print('[animate_descent] ffmpeg not found — falling back to GIF.')
