@@ -1,14 +1,7 @@
-import os
 import sys
 
-# Make ``src`` importable when run as a script from any cwd.
-_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if _ROOT not in sys.path:
-    sys.path.insert(0, _ROOT)
-
-
 from vtvl_sim.paths import result_path
-from vtvl_sim.plotting import animate_descent, plot_state, plot_trajectory
+from vtvl_sim.plotting import animate_descent, plot_engine, plot_state, plot_trajectory
 from vtvl_sim.post_processing import save_csv, write_sim_report
 from vtvl_sim.scenario_io import load_scenario
 from vtvl_sim.sim import sim_run
@@ -27,8 +20,12 @@ if __name__ == '__main__':
         state_plot = plot_state(sim_results, sim_setup)
         state_plot.savefig(result_path('last_sim_state.png'), dpi=150)
         
+    if outputs['engine'] == 1:
+        engine_plot = plot_engine(sim_results, sim_setup)
+        engine_plot.savefig(result_path('last_sim_engine.png'), dpi=150)
+
     if outputs['animation'] == 1:
-        fig, anim = animate_descent(
+        fig, anim, _ = animate_descent(
             sim_results, sim_setup,
             save_path=result_path('last_sim_animation.mp4'),
         )

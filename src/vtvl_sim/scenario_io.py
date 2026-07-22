@@ -24,7 +24,10 @@ def build_setup(raw_sim_setup, raw_solver_setup):
         'params': params,
         'gains': scenario.gains,
         'controller': CONTROLLER_REGISTRY[scenario.controller_name],
-        'phases': [(p.x_target, p.z_target, p.t_end) for p in scenario.phases],
+        'phases': [
+            (p.x_target, p.z_target, p.t_end, np.radians(p.theta_target_deg))
+            for p in scenario.phases
+        ],
         'initial_state': scenario.initial_state.to_list(),
         'landing_tolerance': scenario.landing_tolerance,
     }

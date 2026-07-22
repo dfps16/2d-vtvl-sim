@@ -56,8 +56,8 @@ def cascade_run(state_0, x_target, altitude_target, t_end=20.0, max_step=0.05):
     for i in range(t.size):
         s = sol.y[:, i]
         theta_cmd[i], xddot_des[i] = controller.commanded_tilt(s, PARAMS)
-        u_T[i], zddot_des[i] = controller.commanded_thrust(s, PARAMS)
-        delta[i], thetaddot_des[i] = controller.commanded_thrust_vector(s, PARAMS, theta_cmd[i], u_T[i])
+        u_T[i], zddot_des[i], _ = controller.commanded_thrust(s, PARAMS)
+        delta[i], thetaddot_des[i], _ = controller.commanded_thrust_vector(s, PARAMS, theta_cmd[i], u_T[i])
 
     state = [x, z, xdot, zdot, theta, thetadot]
     u = [theta_cmd, u_T, delta]

@@ -26,15 +26,17 @@ I θ̈  =  -T sin(δ) · L
 2d-vtvl-sim/
 ├── pyproject.toml        — project metadata + pinned dependencies (uv-managed)
 ├── uv.lock               — resolved dependency lockfile for reproducible installs
+├── app.py                — NiceGUI desktop app: build/run/save scenarios, view plots + metrics
 ├── test_scenarios/
+│   ├── default.json      — canonical defaults (GUI + reference), single source of truth for params
 │   └── scenario1.json    — example scenario: physical params, controller/gains, phases, outputs
 ├── src/
 │   └── vtvl_sim/
-│       ├── params.py          — single source of truth: physical params, gains, design targets
+│       ├── params.py          — reference defaults for notebooks + tests (runtime config is JSON-driven)
 │       ├── paths.py           — centralised results-directory paths (no hardcoded absolute paths)
 │       ├── dynamics.py        — 3-DOF EOM
 │       ├── sim.py             — vtvl_solver/sim_run: solve_ivp wrapper, phase chaining, touchdown event
-│       ├── controllers.py     — altitude PID, attitude PD, cascaded PD + CONTROLLER_REGISTRY; LQR not yet added
+│       ├── controllers.py     — Altitude PID, Attitude PD (inner-loop demo), Cascaded PD, all in CONTROLLER_REGISTRY; LQR not yet added
 │       ├── schemas.py         — Pydantic models validating scenario JSON files
 │       ├── scenario_io.py     — load_scenario: JSON -> validated sim/solver/output setup
 │       ├── post_processing.py — CSV export, touchdown report
@@ -45,8 +47,7 @@ I θ̈  =  -T sin(δ) · L
 │   ├── check_sim.py         — baseline altitude-PID diagnostics
 │   ├── attitude_loop.py     — inner attitude-loop response + robustness
 │   ├── check_attitude.py    — inner-loop verification against design targets
-│   ├── check_cascade.py     — full cascade divert-and-land scenario
-│   └── animate_descent.py   — schematic side-view descent animation (MP4/GIF)
+│   └── check_cascade.py     — full cascade divert-and-land scenario
 ├── results/              — saved diagnostic plots (generated, gitignored)
 └── tests/
     ├── dynamics_test.py       — free-fall and hover equilibrium
@@ -102,16 +103,16 @@ Convex G-FOLD reference tracked by LQR, or Monte Carlo dispersion analysis if sk
 
 ## Parameters (nominal)
 
-Defined in `src/params.py`, the single source of truth imported by the simulator, notebooks, and tests:
+Runtime configuration is JSON-driven — a run's parameters come from its scenario file (`test_scenarios/*.json`), validated by `schemas.py`. `test_scenarios/default.json` holds the canonical set below, and the GUI loads it for its default widgets so the GUI, CLI, and scenario files cannot drift. `src/vtvl_sim/params.py` carries the same values as reference defaults for the notebooks and dynamics tests.
 
 | Symbol | Value | Description |
 |--------|-------|-------------|
-| `m` | 120 kg | Dry mass |
+| `m` | 200 kg | Dry mass |
 | `I` | 200 kg·m² | Pitch moment of inertia |
 | `L` | 0.5 m | CoM-to-gimbal moment arm |
 | `g` | 9.81 m/s² | Gravitational acceleration |
 | `T_min` | 1000 N | Minimum throttle (0.4·T_max, non-zero) |
-| `T_max` | 2500 N | Maximum thrust (≈2.1× hover weight) |
+| `T_max` | 2500 N | Maximum thrust (≈1.27× hover weight) |
 | `δ_max` | 12° | Gimbal deflection limit |
 | `tilt_limit` | 10° | Pitch reference clamp (outer-loop θ_cmd limit) |
 

@@ -39,6 +39,10 @@ class Phase(BaseModel):
     x_target: float
     z_target: NonNegativeFloat
     t_end: PositiveFloat
+    # Pitch reference [deg] for the attitude-hold demo controller; ignored by the
+    # mission controllers (Cascaded PD, Altitude PID). Defaulted so scenario files
+    # written before it existed still validate under extra='forbid'.
+    theta_target_deg: float = 0.0
 
 
 class ParamsSchema(BaseModel):
@@ -102,3 +106,6 @@ class Outputs(BaseModel):
     animation: Literal[1, 0]
     report: Literal[1, 0]
     csv: Literal[1, 0]
+    # Defaulted (unlike its siblings) so scenario files written before the engine
+    # plot existed still validate — extra='forbid' would otherwise reject them.
+    engine: Literal[1, 0] = 1

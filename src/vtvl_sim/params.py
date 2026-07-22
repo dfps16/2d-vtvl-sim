@@ -1,13 +1,16 @@
-"""Single source of truth for the lander's physical parameters and baseline gains.
+"""Reference physical parameters and baseline gains for the notebooks and tests.
 
-Imported by the simulator, notebooks, and tests so they can never drift apart.
+Runtime configuration is JSON-driven: the simulator (via run_scenarios / app.py)
+reads scenario files validated by schemas.py, so *those* are the source of truth
+for a run. This module is the shared default set the diagnostic notebooks and the
+dynamics tests import, kept numerically consistent with test_scenarios/*.json.
 """
 
 import numpy as np
 
 # Max thrust sets the scale; T_min is a fixed fraction of it (the non-zero
 # lower bound is the non-convex constraint that motivates G-FOLD later).
-T_MAX = 2500.0  # N, ~2.1x hover weight (m*g = 1177 N)
+T_MAX = 2500.0  # N, ~1.27x hover weight (m*g = 1962 N at m=200 kg)
 
 PARAMS = {
     'm': 200.0,                   # kg   dry mass

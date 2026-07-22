@@ -1,15 +1,8 @@
-import os
-import sys
-
 import numpy as np
 from scipy.integrate import solve_ivp
 
+from vtvl_sim.controllers import _RECORD_KEYS
 from vtvl_sim.dynamics import lander_eom
-
-# Make ``src`` importable when run as a script from any cwd.
-_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if _ROOT not in sys.path:
-    sys.path.insert(0, _ROOT)
 
 
 def closed_loop_rhs(t, state, sim_setup, controller):
@@ -27,8 +20,8 @@ def touchdown_event(t, state, sim_setup, controller):
     touchdown = z - sim_setup['landing_tolerance']
     return touchdown
  
-def vtvl_solver(state_0, x_target, z_target, t_end, sim_setup, solver_setup):
-    
+def vtvl_solver(state_0, x_target, z_target, theta_target, t_end, sim_setup, solver_setup):
+
     # Extracting the simulation setup
     PARAMS = sim_setup['params']
     GAINS = sim_setup['gains']
@@ -38,7 +31,7 @@ def vtvl_solver(state_0, x_target, z_target, t_end, sim_setup, solver_setup):
     max_step = solver_setup['max_step']
     method = solver_setup['method']
 
-    controller = SELECTED_CONTROLLER['build'](GAINS, x_target, z_target)
+    controller = SELECTED_CONTROLLER['build'](GAINS, x_target, z_target, theta_target)
 
     # Setting up termination event(s)
     # Terminal + direction=-1: stop only when z is decreasing through zero (descending touchdown)
@@ -63,19 +56,16 @@ def vtvl_solver(state_0, x_target, z_target, t_end, sim_setup, solver_setup):
     theta = sol.y[4]
     thetadot = sol.y[5]
 
-    theta_cmd = np.empty(t.size)
-    u_T = np.empty(t.size)
-    delta = np.empty(t.size)
-
-    xddot_des = np.empty(t.size)
-    zddot_des = np.empty(t.size)
-    thetaddot_des = np.empty(t.size)
-
+    # Recover the per-step control diagnostics (applied thrust/gimbal and the
+    # pre-saturation demands) by replaying each controller's stateless record()
+    # over the solution states. Any controller in the registry can be recorded
+    # this way — the solver no longer depends on the cascade's internals. Signals
+    # a given controller does not produce come back as NaN.
+    recorded = {k: np.empty(t.size) for k in _RECORD_KEYS}
     for i in range(t.size):
-        s = sol.y[:, i]
-        theta_cmd[i], xddot_des[i] = controller.commanded_tilt(s, PARAMS)
-        u_T[i], zddot_des[i] = controller.commanded_thrust(s, PARAMS)
-        delta[i], thetaddot_des[i] = controller.commanded_thrust_vector(s, PARAMS, theta_cmd[i], u_T[i])
+        rec = controller.record(sol.y[:, i], PARAMS)
+        for k in _RECORD_KEYS:
+            recorded[k][i] = rec[k]
 
     results = {
         't': t,
@@ -85,12 +75,7 @@ def vtvl_solver(state_0, x_target, z_target, t_end, sim_setup, solver_setup):
         'zdot': zdot,
         'theta': theta,
         'thetadot': thetadot,
-        'theta_cmd': theta_cmd,
-        'u_T': u_T,
-        'delta': delta,
-        'xddot_des': xddot_des,
-        'zddot_des': zddot_des,
-        'thetaddot_des': thetaddot_des
+        **recorded,
     }
 
     return results
@@ -101,8 +86,8 @@ def sim_run(sim_setup, solver_setup):
     time_elapsed = 0.0  # time elapsed since start of sim
 
     # Loop through each phase, solve the dynamics, append the results
-    for x_target, z_target, t_end in sim_setup['phases']:
-        seg = vtvl_solver(state_n, x_target, z_target, t_end, sim_setup, solver_setup)
+    for x_target, z_target, t_end, theta_target in sim_setup['phases']:
+        seg = vtvl_solver(state_n, x_target, z_target, theta_target, t_end, sim_setup, solver_setup)
         seg['t'] = seg['t'] + time_elapsed
         segments.append(seg)
         state_n = [seg[k][-1] for k in ('x', 'z', 'xdot', 'zdot', 'theta', 'thetadot')]

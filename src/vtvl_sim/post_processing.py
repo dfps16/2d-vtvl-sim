@@ -1,5 +1,6 @@
 
 import numpy as np
+from scipy.integrate import cumulative_trapezoid
 
 from vtvl_sim.paths import result_path
 
@@ -20,10 +21,90 @@ def save_csv(sim_results, save_path=result_path('last_sim_data.csv')):
         for row in zip(t, x, z, xdot, zdot, theta, thetadot):
             writer.writerow(row)
 
+def engine_signals(sim_results, sim_setup):
+    """Thrust and throttle, commanded (pre-saturation) and actual (applied).
+
+    Single definition of 'throttle' — a fraction of T_max — shared by the engine
+    plot, the animation HUD and the engine metrics.
+    """
+    T_max = sim_setup['params']['T_max']
+    T_cmd = sim_results['T_cmd']   # raw demand m·z̈_des, before the [T_min, T_max] clip
+    T_act = sim_results['u_T']     # post-clip; with no engine lag this is what lander_eom applied
+    return T_cmd, T_act, T_cmd / T_max, T_act / T_max
+
+
+def compute_state_metrics(sim_results):
+    """Peak excursions and the terminal state vector, for the State tab.
+
+    Angles are returned in degrees to match the State plot they sit under; the
+    underlying arrays are radians.
+    """
+    xdot = sim_results['xdot']
+    zdot = sim_results['zdot']
+    theta = sim_results['theta']
+    thetadot = sim_results['thetadot']
+
+    return {
+        'max_speed': np.max(np.sqrt(xdot ** 2 + zdot ** 2)),
+        'max_rate_deg': np.max(np.abs(np.degrees(thetadot))),
+        'max_attitude_deg': np.max(np.abs(np.degrees(theta))),
+        'final_state': {
+            'x': sim_results['x'][-1],
+            'z': sim_results['z'][-1],
+            'xdot': xdot[-1],
+            'zdot': zdot[-1],
+            'theta': np.degrees(theta[-1]),
+            'thetadot': np.degrees(thetadot[-1]),
+        },
+    }
+
+
+def compute_trajectory_metrics(sim_setup, sim_results):
+    """Touchdown metrics plus apogee and the ascent/descent propellant split."""
+    metrics = compute_touchdown_metrics(sim_setup, sim_results)
+
+    params = sim_setup['params']
+    t = sim_results['t']
+    z = sim_results['z']
+    thrust = sim_results['u_T']
+
+    # Constant-mass model, so propellant is only ever a post-hoc integral of the
+    # thrust. Split it at apogee: integrating the rate cumulatively and taking a
+    # difference keeps ascent + descent == the total exactly, which masking the
+    # trapezoid by a boolean would not (it breaks contiguity at the cut).
+    i_apogee = int(np.argmax(z))
+    mdot = thrust / (params['g'] * params['isp'])
+    cum_propellant = cumulative_trapezoid(mdot, t, initial=0.0)
+
+    metrics['apogee'] = np.max(z)
+    metrics['propellant_ascent'] = cum_propellant[i_apogee]
+    metrics['propellant_descent'] = cum_propellant[-1] - cum_propellant[i_apogee]
+    return metrics
+
+
+def compute_engine_metrics(sim_setup, sim_results):
+    """Throttle envelope, in percent of T_max, for the Engine tab.
+
+    Throttle is the *applied* thrust, so the minimum pins at T_min/T_max (40% at
+    the default vehicle) whenever the engine deep-throttles — that is the throttle
+    the engine delivered, not a stuck value. The average is time-weighted because
+    solve_ivp's steps are non-uniform: a plain mean over-counts the transients,
+    where the integrator clusters its samples.
+    """
+    t = sim_results['t']
+    _, _, _, throttle = engine_signals(sim_results, sim_setup)
+
+    return {
+        'throttle_max': 100.0 * np.max(throttle),
+        'throttle_min': 100.0 * np.min(throttle),
+        'throttle_avg': 100.0 * np.trapezoid(throttle, t) / (t[-1] - t[0]),
+    }
+
+
 def compute_touchdown_metrics(sim_setup, sim_results):
     """Touchdown/usage metrics shared by write_sim_report and the GUI summary."""
     phases = sim_setup['phases']
-    x_target, z_target, _ = phases[-1]
+    x_target, z_target, *_ = phases[-1]
     params = sim_setup['params']
 
     thrust = sim_results['u_T']
@@ -44,7 +125,7 @@ def compute_touchdown_metrics(sim_setup, sim_results):
     touchdown_time = t[-1]
     landed = altitude_error < sim_setup['landing_tolerance']
 
-    total_impulse = np.sum(thrust * t)
+    total_impulse = np.trapezoid(thrust, t)
     propellant_mass = total_impulse / (params['g'] * isp)
 
     return {
