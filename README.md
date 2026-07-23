@@ -2,6 +2,10 @@
 
 Planar (3-DOF) thrust-vectoring lander simulation with cascaded PD, LQR, and (stretch) convex G-FOLD guidance.
 
+This repository is the **simulation engine** — an importable `vtvl_sim` package plus a CLI. It has no GUI. The interactive Starworks front-end lives in its own repo and consumes this engine as a pinned dependency:
+
+> **GUI:** [SUSF-Starworks/lander-trajectory-tool](https://github.com/SUSF-Starworks/lander-trajectory-tool)
+
 ---
 
 ## Problem
@@ -23,26 +27,26 @@ I θ̈  =  -T sin(δ) · L
 ## Repository layout
 
 ```
-2d-vtvl-sim/
+vtvl-sim/
 ├── pyproject.toml        — project metadata + pinned dependencies (uv-managed)
 ├── uv.lock               — resolved dependency lockfile for reproducible installs
-├── app.py                — NiceGUI desktop app: build/run/save scenarios, view plots + metrics
 ├── test_scenarios/
-│   ├── default.json      — canonical defaults (GUI + reference), single source of truth for params
+│   ├── default.json      — canonical defaults, single source of truth for params
 │   └── scenario1.json    — example scenario: physical params, controller/gains, phases, outputs
 ├── src/
 │   └── vtvl_sim/
+│       ├── __init__.py         — public API surface (see "Using the engine")
 │       ├── params.py          — reference defaults for notebooks + tests (runtime config is JSON-driven)
 │       ├── paths.py           — centralised results-directory paths (no hardcoded absolute paths)
 │       ├── dynamics.py        — 3-DOF EOM
 │       ├── sim.py             — vtvl_solver/sim_run: solve_ivp wrapper, phase chaining, touchdown event
 │       ├── controllers.py     — Altitude PID, Attitude PD (inner-loop demo), Cascaded PD, all in CONTROLLER_REGISTRY; LQR not yet added
 │       ├── schemas.py         — Pydantic models validating scenario JSON files
-│       ├── scenario_io.py     — load_scenario: JSON -> validated sim/solver/output setup
-│       ├── post_processing.py — CSV export, touchdown report
+│       ├── scenario_io.py     — load_scenario / build_setup: JSON -> validated sim/solver/output setup
+│       ├── post_processing.py — CSV export, touchdown report, state/trajectory/engine metrics
 │       ├── guidance.py        — convex G-FOLD reference (stretch, empty stub)
 │       ├── run_scenarios.py   — CLI entrypoint: run a scenario JSON end to end
-│       └── plotting.py        — state/trajectory plots, descent animation
+│       └── plotting.py        — state/trajectory/engine plots, descent animation
 ├── notebooks/
 │   ├── check_sim.py         — baseline altitude-PID diagnostics
 │   ├── attitude_loop.py     — inner attitude-loop response + robustness
@@ -103,7 +107,7 @@ Convex G-FOLD reference tracked by LQR, or Monte Carlo dispersion analysis if sk
 
 ## Parameters (nominal)
 
-Runtime configuration is JSON-driven — a run's parameters come from its scenario file (`test_scenarios/*.json`), validated by `schemas.py`. `test_scenarios/default.json` holds the canonical set below, and the GUI loads it for its default widgets so the GUI, CLI, and scenario files cannot drift. `src/vtvl_sim/params.py` carries the same values as reference defaults for the notebooks and dynamics tests.
+Runtime configuration is JSON-driven — a run's parameters come from its scenario file (`test_scenarios/*.json`), validated by `schemas.py`. `test_scenarios/default.json` holds the canonical set below, which downstream tools (the GUI) load for their defaults so the engine, CLI, and scenario files cannot drift. `src/vtvl_sim/params.py` carries the same values as reference defaults for the notebooks and dynamics tests.
 
 | Symbol | Value | Description |
 |--------|-------|-------------|
@@ -117,6 +121,28 @@ Runtime configuration is JSON-driven — a run's parameters come from its scenar
 | `tilt_limit` | 10° | Pitch reference clamp (outer-loop θ_cmd limit) |
 
 Mass depletion is deferred to Week 3 (known technical debt); LQR gains computed at fixed mass will need revisiting before the controller comparison is final.
+
+---
+
+## Using the engine
+
+`vtvl_sim` exposes a stable public API from the package root. Downstream tools import from `vtvl_sim` and never reach into submodules:
+
+```python
+from vtvl_sim import (
+    sim_run, build_setup, load_scenario, CONTROLLER_REGISTRY,
+    plot_trajectory, plot_state, plot_engine, animate_descent,
+    compute_state_metrics, compute_trajectory_metrics, compute_engine_metrics,
+    __version__,
+)
+```
+
+This is the contract the GUI depends on. Any change a consumer needs is a new tagged engine release, and the consumer bumps its pin — the front-end pins the engine by tag, e.g.:
+
+```toml
+# in the GUI's pyproject.toml
+dependencies = ["vtvl-sim @ git+https://github.com/dfps16/vtvl-sim.git@v0.2.0"]
+```
 
 ---
 
