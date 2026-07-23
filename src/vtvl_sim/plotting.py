@@ -54,8 +54,8 @@ def plot_state(sim_results, sim_setup):
     theta = sim_results['theta']
     thetadot = sim_results['thetadot']
 
-    fig = Figure(figsize=(10, 9)) 
-    axes = fig.subplots(3, 2, sharex=True).flatten()
+    fig = Figure(figsize=(12, 8))
+    axes = fig.subplots(2, 3, sharex=True).flatten()
     
     axes[0].plot(t, x, label='x', color=_WHITE)
     # axes[0].axhline(x_target, color='r', linestyle='--', linewidth=0.8, label='x_target')
@@ -64,29 +64,29 @@ def plot_state(sim_results, sim_setup):
     axes[0].legend()
     axes[0].grid(True)
 
-    axes[1].plot(t, xdot, color=_WHITE)
-    axes[1].set_ylabel('ẋ [m/s]')
-    axes[1].set_title('Lateral velocity over time')
+    axes[1].plot(t, z, label='z', color=_WHITE)
+    # axes[2].axhline(z_target, color='r', linestyle='--', linewidth=0.8, label='z_target')
+    axes[1].set_ylabel('z [m]')
+    axes[1].set_title('Vertical position over time')
+    axes[1].legend()
     axes[1].grid(True)
 
-    axes[2].plot(t, z, label='z', color=_WHITE)
-    # axes[2].axhline(z_target, color='r', linestyle='--', linewidth=0.8, label='z_target')
-    axes[2].set_ylabel('z [m]')
-    axes[2].set_title('Vertical position over time')
+    axes[2].plot(t, np.degrees(theta), label='θ', color=_WHITE)
+    # axes[2].plot(t, np.degrees(theta_cmd), linestyle='--', label='θ_cmd')
+    axes[2].set_ylabel('θ [deg]')
+    axes[2].set_xlabel('Time [s]')
+    axes[2].set_title('Attitude over time')
     axes[2].legend()
     axes[2].grid(True)
 
-    axes[3].plot(t, zdot, color=_WHITE)
-    axes[3].set_ylabel('ż [m/s]')
-    axes[3].set_title('Vertical velocity over time')
+    axes[3].plot(t, xdot, color=_WHITE)
+    axes[3].set_ylabel('ẋ [m/s]')
+    axes[3].set_title('Lateral velocity over time')
     axes[3].grid(True)
 
-    axes[4].plot(t, np.degrees(theta), label='θ', color=_WHITE)
-    # axes[2].plot(t, np.degrees(theta_cmd), linestyle='--', label='θ_cmd')
-    axes[4].set_ylabel('θ [deg]')
-    axes[4].set_xlabel('Time [s]')
-    axes[4].set_title('Attitude over time')
-    axes[4].legend()
+    axes[4].plot(t, zdot, color=_WHITE)
+    axes[4].set_ylabel('ż [m/s]')
+    axes[4].set_title('Vertical velocity over time')
     axes[4].grid(True)
 
     axes[5].plot(t, np.degrees(thetadot), color=_WHITE)
